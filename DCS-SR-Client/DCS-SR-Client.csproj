@@ -492,6 +492,7 @@
 
         <PackageReference Include="Extended.Wpf.Toolkit" Version="4.7.25104.5739" />
         <PackageReference Include="Fody" Version="6.9.2" />
+        <PackageReference Include="GameInput.Net" Version="0.1.0-ops-setupNuGet.1" />
         <PackageReference Include="MahApps.Metro" Version="2.4.10" />
         <PackageReference Include="Microsoft.Windows.Compatibility" Version="9.0.8" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
