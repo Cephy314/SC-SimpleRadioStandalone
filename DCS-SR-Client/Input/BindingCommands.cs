@@ -1,0 +1,46 @@
+namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
+
+/// <summary>
+/// ENUM containing the various commands that can be bound.
+/// </summary>
+public enum BindingCommands
+{
+    Intercom = 100,
+    Switch1 = 101,
+    Switch2 = 102,
+    Switch3 = 103,
+    Switch4 = 104,
+    Switch5 = 105,
+    Switch6 = 106,
+    Switch7 = 107,
+    Switch8 = 108,
+    Switch9 = 109,
+    Switch10 = 110,
+    PushToTalk = 111,
+    ToggleRadioOverlay = 112,
+    Up100Megahertz = 113,
+    Up10Megahertz = 114,
+    Up1Megahertz = 115,
+    Up100Kilohertz = 116,
+    Up10Kilohertz = 117,
+    Up1Kilohertz = 118,
+    Down100Megahertz = 119,
+    Down10Megahertz = 120,
+    Down1Megahertz = 121,
+    Down100Kilohertz = 122,
+    Down10Kilohertz = 123,
+    Down1Kilohertz = 124,
+    NextRadio = 125,
+    PreviousRadio = 126,
+    ToggleGuard = 127,
+    ToggleEncryption = 128,
+    EncryptionKeyIncrease = 129,
+    EncryptionKeyDecrease = 130,
+    RadioChannelUp = 131,
+    RadioChannelDown = 132,
+    TransponderIdent = 133,
+    RadioVolumeUp = 134,
+    RadioVolumeDown = 135,
+    IntercomPtt = 136, // @TODO Is this redundant with Intercom?
+    ToggleAwacsOverlay = 137,
+}
