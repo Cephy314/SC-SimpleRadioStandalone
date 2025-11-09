@@ -1,13 +1,14 @@
-# DCS-SimpleRadioStandalone
-An open source Stand alone Radio for DCS integrating with all clickable cockpits and FC3 Aircraft
+# SC-SimpleRadioStandalone
+Forked from DCS-SimpleRadioStandalone this version of the client and server are being developed with a focus on Star Citizen and Milsim organizations looking for a radio system that is not tied directly to a game and provides the tools and immersion they need.
 
-Read More Here: http://forums.eagle.ru/showthread.php?t=169387 
+## Additional Help and Information
+Join the DCS-SRS **Discord** where all versions of SRS are shared.
 
-Download: https://github.com/ciribob/DCS-SimpleRadioStandalone/releases/latest
+## Project Status
+This version is in early development and currently is side by side with it's parent repo. 
 
-Donate if you want to so I can purchase Hardware for testing :) 
-
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JY35DDAQ938TN)
-
-<a href="https://www.jetbrains.com/?from=DCS-SimpleRadioStandalone" >Proudly supported by JetBrains Open Source
-  <br><br><img src="https://github.com/ciribob/DCS-SimpleRadioStandalone/raw/master/jetbrains-variant-2.png" width="100" /></a>
+## Planned Changes
+- New key/button binding implementation using Microsoft's GameInput.
+- New interface using Microsoft's new Webview for more immersive and easy to style interactions.
+- Lobbies/Rooms for players to organise in for local voice chat.
+- RBAC allowing fine-grained controls for users/admin/mods.
