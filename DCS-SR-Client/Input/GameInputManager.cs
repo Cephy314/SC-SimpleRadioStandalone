@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using GameInputDotNet;
 using GameInputDotNet.Interop.Enums;
-using GameInputDotNet.Interop.Structs;
 using NLog;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
@@ -14,140 +14,188 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// </summary>
 public class GameInputManager
 {
-    /// <summary>
-    /// Time in milliseconds between GameInput polling is done.
-    /// </summary>
-    private const int _frequency = 10;
+    private Logger _logger = LogManager.GetCurrentClassLogger();
+    private readonly TimeSpan _interval;
+    private CancellationTokenSource _cancellationTokenSource;
     
+    /// <summary>
+    /// Buffer to contain the inputs captured in a comparable class form.
+    /// </summary>
+    
+    private readonly List<InputTrigger> _inputBuffer = [];
     /// <summary>
     /// Relationship of Commands to Bindings for quick unique lookup.
     /// </summary>
-    private Dictionary<BindingCommands, Binding> _commands;
-
-    public GameInputManager()
+    
+    private Dictionary<BindingCommands, Binding> _commandBindings = [];
+    /// <summary>
+    /// Manage input handling through Microsoft GameInput.
+    /// </summary>
+    /// <param name="interval">Frequency of input polling.</param>
+    
+    public GameInputManager(TimeSpan interval)
     {
-        
+        _interval = interval;
     }
 
-    public Task Start()
+    /// <summary>
+    /// Start async periodic task to read inputs and raise input events
+    /// </summary>
+    public void Start()
+    {
+        _cancellationTokenSource = new CancellationTokenSource();
+        _ = RunPeriodicTaskAsync(_cancellationTokenSource.Token);
+    }
+
+    /// <summary>
+    /// Stop periodic events and all input polling.
+    /// </summary>
+    public void Stop()
+    {
+        _cancellationTokenSource?.Cancel();
+    }
+
+    /// <summary>
+    /// Internal task to handle periodic timer.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    private async Task RunPeriodicTaskAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(_interval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                ProcessInput();
+            }
+        }
+        catch (OperationCanceledException e)
+        {
+            // Graceful exit!
+        }
+        catch (Exception e)
+        {
+            // Not graceful...
+            _logger.Error(e);
+        }
+    }
+
+    /// <summary>
+    /// Process all input via GameInput.Net
+    /// </summary>
+    private void ProcessInput()
     {
         using var gameInput = GameInput.Create();
 
-        while (true)
-        {
-            // Delay  between polling
-            Task.Delay(_frequency).Wait();
+        _inputBuffer.Clear();
 
-            try
+        try
+        {
+            using (var reading = gameInput.GetCurrentReading(GameInputKind.Keyboard))
             {
-                using (var reading = gameInput.GetCurrentReading(GameInputKind.Keyboard))
+                if (reading != null)
                 {
-                    if (reading != null)
+                    for (var i = 0; i < reading.GetKeyboardState().Keys.Count; i++)
                     {
-                        
+                        _inputBuffer.Add(new KeyboardTrigger
+                        {
+                            Type = InputTriggerType.Keyboard, Virtualkey = reading.GetKeyboardState().Keys[i].VirtualKey
+                        });
                     }
                 }
             }
-            
-        }
-    }
 
-    /// <summary>
-    /// Get all currently pressed keyboard keys.
-    /// </summary>
-    /// <param name="gameInput"></param>
-    /// <returns></returns>
-    public List<InputTrigger> GetKeyboardTriggers(GameInput gameInput)
-    {
-        try
-        {
-            using var reading = gameInput.GetCurrentReading(GameInputKind.Keyboard);
-            if (reading == null)
-                return [];
-
-            var state = reading.GetKeyboardState();
-
-            if (state is { Keys.Count: > 0 })
+            using (var reading = gameInput.GetCurrentReading(GameInputKind.Mouse))
             {
-                return state.Keys;
-            }
-        }
-        catch (Exception e)
-        {
-            return [];
-        }
-        
-        return [];
-    }
-    
-    /// <summary>
-    /// Get all currently pressed mouse buttons.
-    /// </summary>
-    /// <param name="gameInput"></param>
-    /// <returns></returns>
-    public List<InputTrigger> GetMouseTriggers(GameInput gameInput)
-    {
-        try
-        {
-            foreach(deviceId)
-            var inputs = new List<InputTrigger>();
-            using var reading = gameInput.GetCurrentReading(GameInputKind.Mouse);
-            if (reading == null)
-                return GameInputMouseButtons.None;
-
-            var state = reading.GetMouseState();
-            return state?.Buttons ?? GameInputMouseButtons.None;
-        }
-        catch (Exception e)
-        {
-            return GameInputMouseButtons.None;
-        }
-    }
-
-    /// <summary>
-    /// Get the current active triggers from Controller type devices (Most joysticks/fancy interfaces).
-    /// </summary>
-    /// <param name="gameInput">GameInput.Net object</param>
-    /// <returns></returns>
-    public List<InputTrigger> GetControllerTriggers(GameInput gameInput)
-    {
-        try
-        {
-            var inputs = new List<InputTrigger>();
-            
-            // Enumerate the devices so we can capture specific info about the device and know which one the
-            // trigger is coming from.
-            foreach (var controller in gameInput.EnumerateDevices(GameInputKind.Controller))
-            {
-                var deviceId = controller.GetDeviceInfo().DeviceId.ToHexString(true);
-                
-                // Get the reading from the device.
-                using var reading = gameInput.GetCurrentReading(GameInputKind.Controller, controller);
-                if (reading == null)
-                    return null;
-                var state = reading.GetControllerState();
-                
-                if (state.Buttons.Count == 0) continue;
-                
-                for (var i = 0; i < state.Buttons.Count; i++)
+                if (reading != null)
                 {
-                    inputs.Add(new InputTrigger
+                    var buttons = reading.GetMouseState().Buttons;
+                    foreach (var button in Enum.GetValues<GameInputMouseButtons>())
                     {
-                        ContainerId = deviceId,
-                        DeviceKind = GameInputKind.Controller, ButtonIndex = i
-                    });
-                }
+                        if (buttons.HasFlag(button))
+                        {
+                            _inputBuffer.Add(new MouseButtonTrigger
+                                { Type = InputTriggerType.MouseButton, Button = button });
+                        }
+                    }
 
-                inputs.AddRange(state.Switches.Select(t => new InputTrigger { ContainerId = deviceId, DeviceKind = GameInputKind.Controller, SwitchPosition = t }));
+                    // @TODO Add support for mouse wheel movements.
+                }
             }
-            
-            return inputs;
-            
+
+            var devices = gameInput.EnumerateDevices(GameInputKind.Controller);
+
+            for (var i = 0; i < devices.Count; i++)
+            {
+                var device = devices[i];
+                var deviceId = device.GetDeviceInfo().DeviceId;
+                using (var reading = gameInput.GetCurrentReading(GameInputKind.Controller, device))
+                {
+                    if (reading == null) continue;
+
+                    var state = reading.GetControllerState();
+                    var buttons = state.Buttons;
+                    var switches = state.Switches;
+
+                    // Iterate through buttons
+                    for (byte j = 0; j < buttons.Count; j++)
+                    {
+                        if (!buttons[j]) continue;
+
+                        _inputBuffer.Add(new ControllerButtonTrigger
+                            { Type = InputTriggerType.ControllerButton, Id = deviceId, Button = j });
+                    }
+
+                    // Interate through switches
+                    for (byte j = 0; j < switches.Count; j++)
+                    {
+                        if (switches[j] == GameInputSwitchPosition.Center) continue;
+
+                        _inputBuffer.Add(new ControllerSwitchTrigger
+                        {
+                            Type = InputTriggerType.ControllerSwitch, Id = deviceId, Index = j, Position = switches[j]
+                        });
+                    }
+                }
+            }
         }
         catch (Exception e)
         {
-            // @TODO Add proper logging here.
+            _logger.Error($"Error processing inputs: {e.Message}");
         }
-        return null;
+    }
+
+    private void TestBindings()
+    {
+        foreach (var commandBinding in _commandBindings)
+        {
+            if (commandBinding.Value != null) continue;
+
+            if (IsBindingPressed(commandBinding.Value))
+            {
+                // TODO: Raise event for command.
+            }
+        }
+
+    }
+
+    private bool IsBindingPressed(Binding binding)
+    {
+        if (binding == null) return false;
+
+        if (binding.PrimaryTriggers != null)
+        {
+            if (binding.PrimaryTriggers.All(b => _inputBuffer.Contains(b)))
+            {
+                return true;
+            }
+        }
+
+        if (binding.SecondaryTriggers != null)
+        {
+            return binding.SecondaryTriggers.All(b => _inputBuffer.Contains(b));
+        }
+
+        return false;
     }
 }

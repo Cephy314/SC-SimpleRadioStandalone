@@ -41,6 +41,6 @@ public enum BindingCommands
     TransponderIdent = 133,
     RadioVolumeUp = 134,
     RadioVolumeDown = 135,
-    IntercomPtt = 136, // @TODO Is this redundant with Intercom?
+    IntercomPtt = 136, 
     ToggleAwacsOverlay = 137,
 }
