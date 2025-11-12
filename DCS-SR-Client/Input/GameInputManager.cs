@@ -16,7 +16,10 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// </summary>
 public class GameInputManager : IDisposable
 {
-    private const GameInputKind InputKinds =  GameInputKind.Gamepad | GameInputKind.Mouse | GameInputKind.Keyboard;
+    /// <summary>
+    /// Helper field holding the desired generic input types
+    /// </summary>
+    private const GameInputKind GenericInputKinds =  GameInputKind.Gamepad | GameInputKind.Mouse | GameInputKind.Keyboard;
 
     /// <summary>
     /// Logger Instance
@@ -53,9 +56,16 @@ public class GameInputManager : IDisposable
     /// Relationship of Commands to Bindings for quick unique lookup.
     /// </summary>
     private Dictionary<InputBinding, GameInputBinding> _inputBindings = [];
-
+    
+    /// <summary>
+    /// Holds the last frames active bindings for comparison.
+    /// </summary>
     private HashSet<GameInputBinding> _activeBindings = [];
-    private HashSet<GameInputBinding> _activeBindingsBuffer = [];
+
+    /// <summary>
+    /// Buffer of active bindings populated in the current frame.
+    /// </summary>
+    private readonly HashSet<GameInputBinding> _activeBindingsBuffer = [];
     
     /// <summary>
     /// Manage input handling through Microsoft GameInput.
@@ -191,11 +201,11 @@ public class GameInputManager : IDisposable
         GameInputReading reading;
         if (_lastReading == null)
         {
-            reading = _gameInput.GetCurrentReading(InputKinds);
+            reading = _gameInput.GetCurrentReading(GenericInputKinds);
         }
         else
         {
-            reading = _gameInput.GetNextReading(_lastReading,  InputKinds);
+            reading = _gameInput.GetNextReading(_lastReading,  GenericInputKinds);
         }
         
         // Go through all readings since we last polled GameInput
@@ -246,7 +256,7 @@ public class GameInputManager : IDisposable
             _lastReading = reading;
             
             // Get the next reading in the GameInput buffer. When there are no more we will get null
-            reading = _gameInput.GetNextReading(_lastReading,InputKinds);
+            reading = _gameInput.GetNextReading(_lastReading,GenericInputKinds);
         }
     }
     /// <summary>
