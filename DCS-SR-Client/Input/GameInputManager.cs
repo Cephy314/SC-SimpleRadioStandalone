@@ -175,7 +175,7 @@ public class GameInputManager : IDisposable
                     });
                 }
 
-                // Interate through switches
+                // Iterate through switches
                 for (byte j = 0; j < switches.Count; j++)
                 {
                     if (switches[j] == GameInputSwitchPosition.Center) continue;
@@ -252,7 +252,7 @@ public class GameInputManager : IDisposable
             // @TODO Add support for mouse wheel movements.
             
             // Dispose of old reading and save new reading as last.
-            // CRITICAL must dispose as it holds refs to unmanaged objects, will leak badly if we dont clean.
+            // CRITICAL must dispose as it holds refs to unmanaged objects, will leak badly if we don't clean.
             _lastReading?.Dispose();
             _lastReading = reading;
             
