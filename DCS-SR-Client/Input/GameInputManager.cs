@@ -16,6 +16,9 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// </summary>
 public class GameInputManager : IDisposable
 {
+    public event EventHandler<InputBinding> InputBindingPressed;
+    public event EventHandler<InputBinding> InputBindingReleased;
+    
     /// <summary>
     /// Helper field holding the desired generic input types
     /// </summary>
@@ -68,12 +71,18 @@ public class GameInputManager : IDisposable
     private readonly HashSet<GameInputBinding> _activeBindingsBuffer = [];
     
     /// <summary>
+    /// Reference to the BindingManager so we may subscribe to events like binding changes.
+    /// </summary>
+    private readonly BindingManager _bindingManager;
+    
+    /// <summary>
     /// Manage input handling through Microsoft GameInput.
     /// </summary>
     /// <param name="interval">Frequency of input polling.</param>
-    public GameInputManager(TimeSpan interval)
+    public GameInputManager(TimeSpan interval, BindingManager bindingManager)
     {
         _interval = interval;
+        _bindingManager = bindingManager;
     }
 
     /// <summary>
@@ -287,12 +296,12 @@ public class GameInputManager : IDisposable
         // raise events for the new bindings.
         foreach (var binding in droppedBindings)
         {
-            // TODO: Raise Released Event
+            OnInputBindingReleased(binding.Binding);
         }
 
         foreach (var binding in addedBindings)
         {
-            // TODO: Raise Pressed Event
+            OnInputBindingPressed(binding.Binding);
         }
     }
 
@@ -324,5 +333,15 @@ public class GameInputManager : IDisposable
         {
             reading.Dispose();
         }
+    }
+
+    protected virtual void OnInputBindingPressed(InputBinding binding)
+    {
+        InputBindingPressed?.Invoke(this, binding);
+    }
+
+    protected virtual void OnInputBindingReleased(InputBinding binding)
+    {
+        InputBindingReleased?.Invoke(this, binding);
     }
 }
