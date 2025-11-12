@@ -9,5 +9,6 @@ public enum InputTriggerType : ushort
     Keyboard = 10,
     MouseButton = 20,
     ControllerButton = 30,
-    ControllerSwitch = 40
+    ControllerSwitch = 40,
+    GamePadButton = 50,
 }
