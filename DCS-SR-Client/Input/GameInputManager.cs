@@ -208,11 +208,11 @@ public class GameInputManager : IDisposable
             reading = _gameInput.GetNextReading(_lastReading,  GenericInputKinds);
         }
         
+        if (reading == null || reading == _lastReading) return;
+        
         // Go through all readings since we last polled GameInput
         while(reading != null)
         {
-            if (reading == null || reading == _lastReading) return;
-            
             // Gather keyboard inputs
             for (var i = 0; i < reading.GetKeyboardState().Keys.Count; i++)
             {
