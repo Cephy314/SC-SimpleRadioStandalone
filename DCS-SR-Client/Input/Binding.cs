@@ -1,31 +1,31 @@
-using System.Collections.Generic;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 
 /// <summary>
 /// Binding Record 
 /// </summary>
-public class Binding
+public class GameInputBinding
 {
     /// <summary>
     /// Command that is triggered
     /// </summary>
-    public BindingCommands Command { get; set; }
+    public InputBinding Binding { get; set; }
     
     /// <summary>
     /// Primary combination of inputs
     /// </summary>
-    public List<InputTrigger> PrimaryTriggers { get; set; }
+    public InputTrigger Input { get; set; }
     
     /// <summary>
     /// Secondary combination of inputs
     /// </summary>
-    public List<InputTrigger> SecondaryTriggers { get; set; }
+    public InputTrigger Modifier { get; set; }
 
     /// <summary>
     /// Initialize Generic Binding, JSON Friendly
     /// </summary>
-    public Binding()
+    public GameInputBinding()
     {
     }
 }
