@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
-
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
 using GameInputDotNet;
+using GameInputDotNet.Interop;
 using GameInputDotNet.Interop.Enums;
 using NLog;
 
@@ -13,28 +14,53 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// <summary>
 /// Handle game input and trigger events for matching bindings, as well as the storing of bindings.
 /// </summary>
-public class GameInputManager
+public class GameInputManager : IDisposable
 {
-    private Logger _logger = LogManager.GetCurrentClassLogger();
+    private const GameInputKind InputKinds =  GameInputKind.Gamepad | GameInputKind.Mouse | GameInputKind.Keyboard;
+
+    /// <summary>
+    /// Logger Instance
+    /// </summary>
+    private readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    /// <summary>
+    /// Interval between input polling
+    /// </summary>
     private readonly TimeSpan _interval;
+
+    /// <summary>
+    /// Cancellation token to handle async interrupts 
+    /// </summary>
     private CancellationTokenSource _cancellationTokenSource;
-    
-    
+
+    /// <summary>
+    /// GameInput.Net wrapper on Microsoft.GameInput
+    /// </summary>
+    private GameInput _gameInput;
+
+    /// <summary>
+    /// Last GameInput reading to use as index for continued reading each tick.
+    /// </summary>
+    private GameInputReading _lastReading;
+    private readonly Dictionary<AppLocalDeviceId, GameInputReading> _controllerReadings = new();
+
     /// <summary>
     /// Buffer to contain the inputs captured in a comparable class form.
     /// </summary>
-    
-    private readonly List<InputTrigger> _inputBuffer = [];
+    private readonly HashSet<InputTrigger> _inputBuffer = [];
+
     /// <summary>
     /// Relationship of Commands to Bindings for quick unique lookup.
     /// </summary>
-    
     private Dictionary<InputBinding, GameInputBinding> _inputBindings = [];
+
+    private HashSet<GameInputBinding> _activeBindings = [];
+    private HashSet<GameInputBinding> _activeBindingsBuffer = [];
+    
     /// <summary>
     /// Manage input handling through Microsoft GameInput.
     /// </summary>
     /// <param name="interval">Frequency of input polling.</param>
-    
     public GameInputManager(TimeSpan interval)
     {
         _interval = interval;
@@ -45,6 +71,7 @@ public class GameInputManager
     /// </summary>
     public void Start()
     {
+        _gameInput = GameInput.Create();
         _cancellationTokenSource = new CancellationTokenSource();
         _ = RunPeriodicTaskAsync(_cancellationTokenSource.Token);
     }
@@ -55,6 +82,7 @@ public class GameInputManager
     public void Stop()
     {
         _cancellationTokenSource?.Cancel();
+        _gameInput?.Dispose();
     }
 
     /// <summary>
@@ -87,101 +115,174 @@ public class GameInputManager
     /// </summary>
     private void ProcessInput()
     {
-        using var gameInput = GameInput.Create();
-
         _inputBuffer.Clear();
+        ProcessGenericDevices();
+        ProcessControllerDevices();
+    }
 
-        try
+    /// <summary>
+    /// Process each controller device with its own readings to create input/device association
+    /// </summary>
+    private void ProcessControllerDevices()
+    {
+        // Handle controllers differently as we want to attach their ID to their binds since we want distinct
+        // input from multiple controllers.
+        var devices = _gameInput.EnumerateDevices(GameInputKind.Controller);
+
+        for (var i = 0; i < devices.Count; i++)
         {
-            using (var reading = gameInput.GetCurrentReading(GameInputKind.Keyboard))
+            var device = devices[i];
+            var deviceId = device.GetDeviceInfo().DeviceId;
+            // Loop through readings for the device.
+            GameInputReading reading;
+            if (_controllerReadings.TryGetValue(deviceId, out var value))
             {
-                if (reading != null)
-                {
-                    for (var i = 0; i < reading.GetKeyboardState().Keys.Count; i++)
-                    {
-                        _inputBuffer.Add(new KeyboardTrigger
-                        {
-                            Type = InputTriggerType.Keyboard, Virtualkey = reading.GetKeyboardState().Keys[i].VirtualKey
-                        });
-                    }
-                }
+                reading = _gameInput.GetNextReading(value, GameInputKind.Controller, device);
             }
-
-            using (var reading = gameInput.GetCurrentReading(GameInputKind.Mouse))
+            else
             {
-                if (reading != null)
-                {
-                    var buttons = reading.GetMouseState().Buttons;
-                    foreach (var button in Enum.GetValues<GameInputMouseButtons>())
-                    {
-                        if (buttons.HasFlag(button))
-                        {
-                            _inputBuffer.Add(new MouseButtonTrigger
-                                { Type = InputTriggerType.MouseButton, Button = button });
-                        }
-                    }
-
-                    // @TODO Add support for mouse wheel movements.
-                }
+                reading = _gameInput.GetCurrentReading(GameInputKind.Controller, device);
             }
+            
+            // Skip if the reading is the same or null.
+            if (reading == null || reading == _controllerReadings[deviceId]) continue;
 
-            var devices = gameInput.EnumerateDevices(GameInputKind.Controller);
-
-            for (var i = 0; i < devices.Count; i++)
+            while (reading != null)
             {
-                var device = devices[i];
-                var deviceId = device.GetDeviceInfo().DeviceId;
-                using (var reading = gameInput.GetCurrentReading(GameInputKind.Controller, device))
+                var state = reading.GetControllerState();
+                var buttons = state.Buttons;
+                var switches = state.Switches;
+
+                // Iterate through buttons
+                for (byte j = 0; j < buttons.Count; j++)
                 {
-                    if (reading == null) continue;
+                    if (!buttons[j]) continue;
 
-                    var state = reading.GetControllerState();
-                    var buttons = state.Buttons;
-                    var switches = state.Switches;
-
-                    // Iterate through buttons
-                    for (byte j = 0; j < buttons.Count; j++)
+                    _inputBuffer.Add(new ControllerButtonTrigger
                     {
-                        if (!buttons[j]) continue;
-
-                        _inputBuffer.Add(new ControllerButtonTrigger
-                            { Type = InputTriggerType.ControllerButton, Id = deviceId, Button = j });
-                    }
-
-                    // Interate through switches
-                    for (byte j = 0; j < switches.Count; j++)
-                    {
-                        if (switches[j] == GameInputSwitchPosition.Center) continue;
-
-                        _inputBuffer.Add(new ControllerSwitchTrigger
-                        {
-                            Type = InputTriggerType.ControllerSwitch, Id = deviceId, Index = j, Position = switches[j]
-                        });
-                    }
+                        Type = InputTriggerType.ControllerButton, Id = deviceId, Button = j
+                    });
                 }
+
+                // Interate through switches
+                for (byte j = 0; j < switches.Count; j++)
+                {
+                    if (switches[j] == GameInputSwitchPosition.Center) continue;
+
+                    _inputBuffer.Add(new ControllerSwitchTrigger
+                    {
+                        Type = InputTriggerType.ControllerSwitch, Id = deviceId, Index = j, Position = switches[j]
+                    });
+                }
+                
+                // CRITICAL must dispose as it holds refs to unmanaged objects, will leak badly if we don't clean.
+                _controllerReadings[deviceId].Dispose();
+                _controllerReadings[deviceId] = reading;
+                reading = _gameInput.GetNextReading(_controllerReadings[deviceId], GameInputKind.Controller, device);
             }
-        }
-        catch (Exception e)
-        {
-            _logger.Error($"Error processing inputs: {e.Message}");
         }
     }
 
     /// <summary>
+    /// Process generic devices that do not need input associated, we don't care if the key comes from different keyboards.
+    /// </summary>
+    private void ProcessGenericDevices()
+    {
+        GameInputReading reading;
+        if (_lastReading == null)
+        {
+            reading = _gameInput.GetCurrentReading(InputKinds);
+        }
+        else
+        {
+            reading = _gameInput.GetNextReading(_lastReading,  InputKinds);
+        }
+        
+        // Go through all readings since we last polled GameInput
+        while(reading != null)
+        {
+            if (reading == null || reading == _lastReading) return;
+            
+            // Gather keyboard inputs
+            for (var i = 0; i < reading.GetKeyboardState().Keys.Count; i++)
+            {
+                _inputBuffer.Add(new KeyboardTrigger
+                {
+                    Type = InputTriggerType.Keyboard, Virtualkey = reading.GetKeyboardState().Keys[i].VirtualKey
+                });
+            }
+            
+            // Gather mouse button readings
+            var mouseButtons = reading.GetMouseState().Buttons;
+            foreach (var button in Enum.GetValues<GameInputMouseButtons>())
+            {
+                if (button == 0) continue; // Skip "None" value
+                if (mouseButtons.HasFlag(button))
+                {
+                    _inputBuffer.Add(new MouseButtonTrigger { Type = InputTriggerType.MouseButton, Button = button });
+                }
+            }
+            
+            // Gather GamePad readings
+            var gamepadButtons = reading.GetGamepadState().Buttons;
+            foreach (var button in Enum.GetValues<GameInputGamepadButtons>())
+            {
+                if (button == 0) continue;
+                if (gamepadButtons.HasFlag(button))
+                {
+                    _inputBuffer.Add( new GamePadButtonTrigger
+                    {
+                        Type = InputTriggerType.GamePadButton, 
+                        Button = button
+                    });
+                }
+            }
+
+            // @TODO Add support for mouse wheel movements.
+            
+            // Dispose of old reading and save new reading as last.
+            // CRITICAL must dispose as it holds refs to unmanaged objects, will leak badly if we dont clean.
+            _lastReading?.Dispose();
+            _lastReading = reading;
+            
+            // Get the next reading in the GameInput buffer. When there are no more we will get null
+            reading = _gameInput.GetNextReading(_lastReading,InputKinds);
+        }
+    }
+    /// <summary>
     /// Iterates over bound <see cref="InputBinding" /> and raises events when active.
     /// </summary>
-    private void ProcessBoundEvents()
+    private void ProcessBindings()
     {
         foreach (var commandBinding in _inputBindings)
         {
+            _activeBindingsBuffer.Clear();
+            
             if (commandBinding.Value != null) continue;
 
             if (IsBindingActivated(commandBinding.Value))
             {
-                // TODO: Raise event for command.
+                _activeBindingsBuffer.Add(commandBinding.Value);
             }
         }
+        
+        // Compare _activeBindings and _activeBindingsBuffer and see what is new in the buffer and what is missing.
+        var addedBindings = _activeBindingsBuffer.Except(_activeBindings).ToList();
+        var droppedBindings = _activeBindings.Except(_activeBindingsBuffer).ToList();
+        
+        // Update the active bindings for the next iteration.
+        _activeBindings = _activeBindingsBuffer;
 
+        // raise events for the new bindings.
+        foreach (var binding in droppedBindings)
+        {
+            // TODO: Raise Released Event
+        }
+
+        foreach (var binding in addedBindings)
+        {
+            // TODO: Raise Pressed Event
+        }
     }
 
     /// <summary>
@@ -201,5 +302,16 @@ public class GameInputManager
         if (binding.Modifier == null) return input;
 
         return _inputBuffer.Contains(binding.Modifier) && input;
+    }
+
+    public void Dispose()
+    {
+        _cancellationTokenSource?.Dispose();
+        _gameInput?.Dispose();
+        _lastReading.Dispose();
+        foreach (var reading in _controllerReadings.Values)
+        {
+            reading.Dispose();
+        }
     }
 }
