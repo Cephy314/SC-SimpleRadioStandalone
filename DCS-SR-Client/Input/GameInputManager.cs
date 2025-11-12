@@ -128,6 +128,7 @@ public class GameInputManager : IDisposable
         _inputBuffer.Clear();
         ProcessGenericDevices();
         ProcessControllerDevices();
+        ProcessBindings();
     }
 
     /// <summary>
