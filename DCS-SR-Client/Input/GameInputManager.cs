@@ -223,10 +223,10 @@ public class GameInputManager : IDisposable
             }
             
             // Gather mouse button readings
-            var mouseButtons = reading.GetMouseState().Buttons;
+            var mouseButtons = reading.GetMouseState()?.Buttons ?? GameInputMouseButtons.None; 
             foreach (var button in Enum.GetValues<GameInputMouseButtons>())
             {
-                if (button == 0) continue; // Skip "None" value
+                if (button == 0 || mouseButtons == 0) continue; // Skip "None" value
                 if (mouseButtons.HasFlag(button))
                 {
                     _inputBuffer.Add(new MouseButtonTrigger { Type = InputTriggerType.MouseButton, Button = button });
@@ -234,10 +234,10 @@ public class GameInputManager : IDisposable
             }
             
             // Gather GamePad readings
-            var gamepadButtons = reading.GetGamepadState().Buttons;
+            var gamepadButtons = reading.GetGamepadState()?.Buttons  ?? GameInputGamepadButtons.None;
             foreach (var button in Enum.GetValues<GameInputGamepadButtons>())
             {
-                if (button == 0) continue;
+                if (button == 0 || gamepadButtons == 0) continue;
                 if (gamepadButtons.HasFlag(button))
                 {
                     _inputBuffer.Add( new GamePadButtonTrigger
