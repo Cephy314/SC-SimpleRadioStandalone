@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Threading;
 using System.Threading.Tasks;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
 using GameInputDotNet;
 using GameInputDotNet.Interop.Enums;
 using NLog;
@@ -18,6 +19,7 @@ public class GameInputManager
     private readonly TimeSpan _interval;
     private CancellationTokenSource _cancellationTokenSource;
     
+    
     /// <summary>
     /// Buffer to contain the inputs captured in a comparable class form.
     /// </summary>
@@ -27,7 +29,7 @@ public class GameInputManager
     /// Relationship of Commands to Bindings for quick unique lookup.
     /// </summary>
     
-    private Dictionary<BindingCommands, Binding> _commandBindings = [];
+    private Dictionary<InputBinding, GameInputBinding> _inputBindings = [];
     /// <summary>
     /// Manage input handling through Microsoft GameInput.
     /// </summary>
@@ -165,13 +167,16 @@ public class GameInputManager
         }
     }
 
-    private void TestBindings()
+    /// <summary>
+    /// Iterates over bound <see cref="InputBinding" /> and raises events when active.
+    /// </summary>
+    private void ProcessBoundEvents()
     {
-        foreach (var commandBinding in _commandBindings)
+        foreach (var commandBinding in _inputBindings)
         {
             if (commandBinding.Value != null) continue;
 
-            if (IsBindingPressed(commandBinding.Value))
+            if (IsBindingActivated(commandBinding.Value))
             {
                 // TODO: Raise event for command.
             }
@@ -179,23 +184,22 @@ public class GameInputManager
 
     }
 
-    private bool IsBindingPressed(Binding binding)
+    /// <summary>
+    /// Detect if a binding has all of its inputs activated.
+    /// </summary>
+    /// <param name="binding"><see cref="GameInputBinding"/> containing the function and the inputs that it is bound to</param>
+    /// <returns>TRUE if the inputs are activated</returns>
+    private bool IsBindingActivated(GameInputBinding binding)
     {
-        if (binding == null) return false;
+        // Ensure GameInputBinding and Input property are not null
+        if (binding?.Input == null) return false;
+        
+        // Is our input activated in this frame.
+        var input = _inputBuffer.Contains(binding.Input);
 
-        if (binding.PrimaryTriggers != null)
-        {
-            if (binding.PrimaryTriggers.All(b => _inputBuffer.Contains(b)))
-            {
-                return true;
-            }
-        }
+        // If we don't have a modifier then the input is all that matters.
+        if (binding.Modifier == null) return input;
 
-        if (binding.SecondaryTriggers != null)
-        {
-            return binding.SecondaryTriggers.All(b => _inputBuffer.Contains(b));
-        }
-
-        return false;
+        return _inputBuffer.Contains(binding.Modifier) && input;
     }
 }
