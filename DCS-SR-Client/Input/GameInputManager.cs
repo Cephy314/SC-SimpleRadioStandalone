@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
 using GameInputDotNet;
 using GameInputDotNet.Interop;
 using GameInputDotNet.Interop.Enums;
 using NLog;
+using InputBinding = Ciribob.DCS.SimpleRadio.Standalone.Common.Settings.InputBinding;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 
