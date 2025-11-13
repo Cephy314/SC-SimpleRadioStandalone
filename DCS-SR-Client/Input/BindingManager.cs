@@ -101,9 +101,27 @@ public class BindingManager : IDisposable
         }
     }
 
-    private void SetBinding() { }
+    public void SetBinding(GameInputBinding binding)
+    {
+        if (_currentProfile == null)
+        {
+            _logger.Error($"Binding profile object is null.");
+            throw new NullReferenceException($"Binding profile object is null.");
+        }
 
-    private void ClearBinding() { }
+        _currentProfile.Bindings[binding.Binding] = binding;
+    }
+
+    private bool ClearBinding(InputBinding binding)
+    {
+        if (_currentProfile == null)
+        {
+            _logger.Error($"Binding profile object is null.");
+            throw new NullReferenceException($"Binding profile object is null.");
+        }
+        
+        return _currentProfile.Bindings.Remove(binding);
+    }
 
     public void Dispose()
     {
