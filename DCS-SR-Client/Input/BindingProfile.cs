@@ -7,5 +7,5 @@ public class BindingProfile
 {
     public string ProfileName { get; set; }
     public string ProfileVersion { get; set; } = "1.0";
-    public Dictionary<InputBinding, GameInputBinding> Bindings { get; set; }
+    public Dictionary<InputBinding, GameInputBinding> Bindings { get; set; } = new();
 }
