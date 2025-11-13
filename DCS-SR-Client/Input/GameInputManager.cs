@@ -34,6 +34,8 @@ public class GameInputManager : IDisposable
     /// </summary>
     private readonly TimeSpan _interval;
 
+    private bool _raiseEvents = true;
+
     /// <summary>
     /// Cancellation token to handle async interrupts 
     /// </summary>
@@ -128,7 +130,42 @@ public class GameInputManager : IDisposable
             _logger.Error(e);
         }
     }
+    
+    /// <summary>
+    /// Pause binding events and listen to the input loop for the first input it gets then return the value and resumes binding events.
+    /// </summary>
+    /// <param name="waitTime">Time in milliseconds to wait for an input</param>
+    /// <returns>First <see cref="InputTrigger"/> or null if nothing found</returns>
+    public async Task<InputTrigger> WaitForNextInput(int waitTime)
+    {
+        // How long will we wait for the 
+        var maxElapsed = new TimeSpan(waitTime);
+        var start = DateTime.Now;
+        _raiseEvents = false;
+        InputTrigger input;
+        
+        // Wait for an input from the main loop. or the time to run out.
+        while (true)
+        {
+            await Task.Delay(10);
+            
+            if (DateTime.Now - start > maxElapsed)
+            {
+                input = null;
+                break;
+            }
 
+            if (_inputBuffer.Count != 0)
+            {
+                input = _inputBuffer.First();
+                break;
+            }
+        }
+        
+        _raiseEvents = true;
+        return input;
+    }
+    
     /// <summary>
     /// Process all input via GameInput.Net
     /// </summary>
@@ -274,6 +311,9 @@ public class GameInputManager : IDisposable
     /// </summary>
     private void ProcessBindings()
     {
+        // Allow for temporary suspension of event raising.
+        if (!_raiseEvents) return;
+        
         foreach (var commandBinding in _inputBindings)
         {
             _activeBindingsBuffer.Clear();
