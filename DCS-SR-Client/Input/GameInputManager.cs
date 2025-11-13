@@ -83,6 +83,7 @@ public class GameInputManager : IDisposable
     /// <param name="interval">Frequency of input polling.</param>
     public GameInputManager(TimeSpan interval, BindingManager bindingManager)
     {
+        _gameInput = GameInput.Create();
         _interval = interval;
         _bindingManager = bindingManager;
     }
@@ -92,7 +93,6 @@ public class GameInputManager : IDisposable
     /// </summary>
     public void Start()
     {
-        _gameInput = GameInput.Create();
         _cancellationTokenSource = new CancellationTokenSource();
         _ = RunPeriodicTaskAsync(_cancellationTokenSource.Token);
     }
@@ -103,7 +103,6 @@ public class GameInputManager : IDisposable
     public void Stop()
     {
         _cancellationTokenSource?.Cancel();
-        _gameInput?.Dispose();
     }
 
     /// <summary>
