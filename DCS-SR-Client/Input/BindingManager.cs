@@ -15,6 +15,11 @@ public class BindingManager : IDisposable
     private readonly Logger  _logger = LogManager.GetCurrentClassLogger(); 
     private readonly string _appDirectory = AppDomain.CurrentDomain.BaseDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() {WriteIndented = true};
+    private BindingProfile _currentProfile;
+    
+    /// <summary>
+    /// Handles all read-write file operations for bindings and individual reading/writting of binding changes.
+    /// </summary>
     BindingManager()
     {
         
