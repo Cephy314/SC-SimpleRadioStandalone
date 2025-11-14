@@ -143,6 +143,17 @@ public class BindingManager : IDisposable
         return _currentProfile.Bindings.Remove(binding);
     }
 
+    public GameInputBinding GetBinding(InputBinding input)
+    {
+        if (_currentProfile == null)
+        {
+            _logger.Error($"Binding profile object is null.");
+            throw new NullReferenceException($"Binding profile object is null.");
+        }
+        
+        return _currentProfile.Bindings.TryGetValue(input, out var binding) ? binding : null;
+    }
+
     public void Dispose()
     {
         // TODO release managed resources here
