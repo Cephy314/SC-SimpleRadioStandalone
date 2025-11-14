@@ -20,7 +20,7 @@ public class BindingManager : IDisposable
     /// <summary>
     /// Handles all read-write file operations for bindings and individual reading/writting of binding changes.
     /// </summary>
-    BindingManager()
+    public BindingManager()
     {
         
     }
