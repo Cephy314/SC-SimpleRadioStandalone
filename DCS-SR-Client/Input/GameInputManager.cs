@@ -332,16 +332,22 @@ public class GameInputManager : IDisposable
         // Update the active bindings for the next iteration.
         _activeBindings = _activeBindingsBuffer;
 
+        var change = new List<GameInputBinding>();
+        
         // raise events for the new bindings.
         foreach (var binding in droppedBindings)
         {
-            OnInputBindingReleased(binding.Binding);
+            binding.IsActive = false;
+            change.Add(binding);
         }
 
         foreach (var binding in addedBindings)
         {
-            OnInputBindingPressed(binding.Binding);
+            binding.IsActive = true;
+            change.Add(binding);
         }
+
+        OnInputBindingChange(change);
     }
 
     /// <summary>
@@ -374,13 +380,8 @@ public class GameInputManager : IDisposable
         }
     }
 
-    protected virtual void OnInputBindingPressed(InputBinding binding)
+    private void OnInputBindingChange(List<GameInputBinding> binding)
     {
-        InputBindingPressed?.Invoke(this, binding);
-    }
-
-    protected virtual void OnInputBindingReleased(InputBinding binding)
-    {
-        InputBindingReleased?.Invoke(this, binding);
+        InputBindingChange?.Invoke(this, binding);
     }
 }

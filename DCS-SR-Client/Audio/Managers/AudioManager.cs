@@ -29,6 +29,7 @@ using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Utility;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers;
 
@@ -96,10 +97,12 @@ public class AudioManager : IHandle<SRClientUpdateMessage>
     private WasapiCapture _wasapiCapture;
 
     private SRSWasapiOut _waveOut;
+    private readonly GameInputManager _gameInputManager;
 
-    public AudioManager(bool windowsN)
+    public AudioManager(bool windowsN, GameInputManager gameInputManager)
     {
         this.windowsN = windowsN;
+        _gameInputManager = gameInputManager;
         _guid = ClientStateSingleton.Instance.ShortGUID;
     }
 
@@ -223,7 +226,8 @@ public class AudioManager : IHandle<SRClientUpdateMessage>
         _wasapiCapture.StartRecording();
     }
 
-    public void StartEncoding(string guid, InputDeviceManager inputManager,
+    // REVIEW: Removed the inputManager arg, it is never used here.
+    public void StartEncoding(string guid,
         IPEndPoint endPoint)
     {
         InitEncodersSpeex();
@@ -278,7 +282,7 @@ public class AudioManager : IHandle<SRClientUpdateMessage>
             new UDPVoiceHandler(guid, endPoint);
         
 
-        _udpClientAudioProcessor = new UDPClientAudioProcessor(_udpVoiceHandler, this, guid);
+        _udpClientAudioProcessor = new UDPClientAudioProcessor(_udpVoiceHandler, this, _gameInputManager, guid);
 
         _udpVoiceHandler.Connect();
         _udpClientAudioProcessor.Start();

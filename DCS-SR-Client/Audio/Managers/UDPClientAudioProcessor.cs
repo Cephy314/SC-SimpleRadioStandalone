@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Network.DCS.Models.DCSState;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Network.Models;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Singletons;
@@ -33,6 +34,7 @@ public class UDPClientAudioProcessor : IDisposable
     // private UDPStateSender _udpStateSender;
     private readonly AudioInputSingleton _audioInputSingleton = AudioInputSingleton.Instance;
     private readonly AudioManager _audioManager;
+    private readonly GameInputManager _gameInputManager;
     private readonly ConnectedClientsSingleton _clients = ConnectedClientsSingleton.Instance;
     private readonly ClientStateSingleton _clientStateSingleton = ClientStateSingleton.Instance;
     private readonly GlobalSettingsStore _globalSettings = GlobalSettingsStore.Instance;
@@ -55,10 +57,11 @@ public class UDPClientAudioProcessor : IDisposable
     private volatile bool _ptt;
     private bool _stop;
 
-    public UDPClientAudioProcessor(UDPVoiceHandler udpClient, AudioManager audioManager, string guid)
+    public UDPClientAudioProcessor(UDPVoiceHandler udpClient, AudioManager audioManager, GameInputManager gameInputManager, string guid)
     {
         _udpClient = udpClient;
         _audioManager = audioManager;
+        _gameInputManager = gameInputManager;
         _guid = guid;
         _guidAsciiBytes = Encoding.ASCII.GetBytes(guid);
 
@@ -80,12 +83,48 @@ public class UDPClientAudioProcessor : IDisposable
 
         var decoderThread = new Thread(UdpAudioDecode);
         decoderThread.Start();
-        InputDeviceManager.Instance.StartPTTListening(PTTHandler);
+        //InputDeviceManager.Instance.StartPTTListening(PTTHandler);
+        _gameInputManager.InputBindingChange += PTTHandler;
+        _gameInputManager.InputBindingReleased += HandleInputReleased;
         //TODO Fix this - command listener and state sender (to DCS)
         // _udpCommandListener = new UDPCommandListener();
         // _udpCommandListener.Start();
         // _udpStateSender = new UDPStateSender();
         // _udpStateSender.Start();
+    }
+
+    private void HandleInputReleased(object sender, InputBinding e)
+    {
+        switch (e)
+        {
+            case InputBinding.Ptt:
+            {
+                _ptt = false;
+                break;
+            }
+            case InputBinding.IntercomPTT:
+            {
+                _intercomPtt = false;
+                break;
+            }
+        }
+    }
+
+    private void HandleInputPressed(object sender, InputBinding e)
+    {
+        switch (e)
+        {
+            case InputBinding.Ptt:
+            {
+                _ptt = true;
+                break;
+            }
+            case InputBinding.IntercomPTT:
+            {
+                _intercomPtt = true;
+                break;
+            }
+        }
     }
 
 
@@ -742,7 +781,7 @@ public class UDPClientAudioProcessor : IDisposable
         return false;
     }
 
-    private void PTTHandler(List<InputBindState> pressed)
+    private void PTTHandler(object callingObject, List<GameInputBinding> pressed)
     {
         var radios = _clientStateSingleton.DcsPlayerRadioInfo;
 
@@ -762,11 +801,11 @@ public class UDPClientAudioProcessor : IDisposable
             if (inputBindState.IsActive)
             {
                 //radio switch?
-                if ((int)inputBindState.MainDevice.InputBind >= (int)InputBinding.Intercom &&
-                    (int)inputBindState.MainDevice.InputBind <= (int)InputBinding.Switch10)
+                if ((int)inputBindState.Binding >= (int)InputBinding.Intercom &&
+                    (int)inputBindState.Binding <= (int)InputBinding.Switch10)
                 {
                     //gives you radio id if you minus 100
-                    var radioId = (int)inputBindState.MainDevice.InputBind - 100;
+                    var radioId = (int)inputBindState.Binding - 100;
 
                     if (radioId < _clientStateSingleton.DcsPlayerRadioInfo.radios.Length)
                     {
@@ -793,12 +832,12 @@ public class UDPClientAudioProcessor : IDisposable
                         }
                     }
                 }
-                else if (inputBindState.MainDevice.InputBind == InputBinding.Ptt)
+                else if (inputBindState.Binding == InputBinding.Ptt)
                 {
                     _lastPTTPress = DateTime.Now.Ticks;
                     ptt = true;
                 }
-                else if (inputBindState.MainDevice.InputBind == InputBinding.IntercomPTT)
+                else if (inputBindState.Binding == InputBinding.IntercomPTT)
                 {
                     intercomPtt = true;
                 }
@@ -874,7 +913,8 @@ public class UDPClientAudioProcessor : IDisposable
             // _udpCommandListener = null;
             // _udpStateSender?.Stop();
             // _udpStateSender = null;
-            InputDeviceManager.Instance.StopListening();
+            //InputDeviceManager.Instance.StopListening();
+            _gameInputManager.InputBindingChange -= PTTHandler;
         }
     }
 }
