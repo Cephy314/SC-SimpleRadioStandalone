@@ -692,7 +692,8 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
         {
             try
             {
-                _audioManager.StartEncoding(ClientState.ShortGUID, InputManager, endPoint);
+                // REVIEW: Removed inputManager arg as it is never used.
+                _audioManager.StartEncoding(ClientState.ShortGUID, endPoint);
             }
             catch (Exception ex)
             {
