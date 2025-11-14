@@ -85,7 +85,6 @@ public class UDPClientAudioProcessor : IDisposable
         decoderThread.Start();
         //InputDeviceManager.Instance.StartPTTListening(PTTHandler);
         _gameInputManager.InputBindingChange += PTTHandler;
-        _gameInputManager.InputBindingReleased += HandleInputReleased;
         //TODO Fix this - command listener and state sender (to DCS)
         // _udpCommandListener = new UDPCommandListener();
         // _udpCommandListener.Start();
