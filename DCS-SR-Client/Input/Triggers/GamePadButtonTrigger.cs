@@ -37,4 +37,9 @@ public class GamePadButtonTrigger : InputTrigger, IEquatable<GamePadButtonTrigge
     {
         return !(left == right);
     }
+
+    public override string ToString()
+    {
+        return $"{base.ToString()} {Enum.GetName(Button)}";
+    }
 }

@@ -26,4 +26,16 @@ public abstract class InputTrigger : IEquatable<InputTrigger>
     {
         return (int)Type;
     }
+
+    public override string ToString()
+    {
+        return Type switch
+        {
+            InputTriggerType.GamePadButton or InputTriggerType.ControllerButton => "Button",
+            InputTriggerType.ControllerSwitch => "Switch",
+            InputTriggerType.Keyboard => "Key",
+            InputTriggerType.MouseButton => "Mouse",
+            _ => "Unknown"
+        };
+    }
 }

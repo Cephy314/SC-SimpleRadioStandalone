@@ -29,4 +29,6 @@ public class InputDeviceTrigger : InputTrigger, IEquatable<InputDeviceTrigger>
     {
         return HashCode.Combine(base.GetHashCode(), Id);
     }
+
+    // TODO: Add ToString override that can add device name into mix.
 }

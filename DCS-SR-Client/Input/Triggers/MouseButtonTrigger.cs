@@ -38,4 +38,9 @@ public class MouseButtonTrigger : InputTrigger , IEquatable<MouseButtonTrigger>
     {
         return !Equals(left, right);
     }
+
+    public override string ToString()
+    {
+        return $"{base.ToString()} {Enum.GetName(Button)}";
+    }
 }

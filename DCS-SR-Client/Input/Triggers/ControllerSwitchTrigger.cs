@@ -9,7 +9,7 @@ public class ControllerSwitchTrigger : InputDeviceTrigger, IEquatable<Controller
     /// Index of switch on controller
     /// </summary>
     public byte Index { get; set; }
-    
+
     /// <summary>
     /// Switch position
     /// </summary>
@@ -25,7 +25,7 @@ public class ControllerSwitchTrigger : InputDeviceTrigger, IEquatable<Controller
     public override bool Equals(object obj)
     {
         if (obj is null) return false;
-  
+
         if (obj.GetType() != GetType()) return false;
         return Equals((ControllerSwitchTrigger)obj);
     }
@@ -34,4 +34,10 @@ public class ControllerSwitchTrigger : InputDeviceTrigger, IEquatable<Controller
     {
         return HashCode.Combine(base.GetHashCode(), (int)Position, Index);
     }
+
+    public override string ToString()
+    {
+        return $"{base.ToString()} {Index} {Enum.GetName(Position)}";
+    }
+
 }

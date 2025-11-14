@@ -31,4 +31,9 @@ public class ControllerButtonTrigger : InputDeviceTrigger, IEquatable<Controller
     {
         return HashCode.Combine(base.GetHashCode(), Button);
     }
+
+    public override string ToString()
+    {
+        return $"{base.ToString()} {Button}";
+    }
 }

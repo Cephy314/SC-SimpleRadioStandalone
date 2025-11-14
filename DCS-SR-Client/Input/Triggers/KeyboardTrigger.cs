@@ -34,4 +34,9 @@ public class KeyboardTrigger : InputTrigger, IEquatable<KeyboardTrigger>
     {
         return !Equals(left, right);
     }
+
+    public override string ToString()
+    {
+        return $"{base.ToString()} {Virtualkey}";
+    }
 }
