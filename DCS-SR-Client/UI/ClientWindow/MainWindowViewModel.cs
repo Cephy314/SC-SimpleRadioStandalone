@@ -155,8 +155,10 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
     public AudioInputSingleton AudioInput { get; } = AudioInputSingleton.Instance;
     public AudioOutputSingleton AudioOutput { get; } = AudioOutputSingleton.Instance;
 
-    public InputDeviceManager InputManager { get; set; }
-
+    
+    // public InputDeviceManager InputManager { get; set; }
+    
+    
     public bool IsEAMAvailable => ClientStateSingleton.Instance.IsConnected &&
                                   SyncedServerSettings.Instance.GetSettingAsBool(ServerSettingsKeys
                                       .EXTERNAL_AWACS_MODE);
