@@ -14,10 +14,12 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// <summary>
 /// Handle game input and trigger events for matching bindings, as well as the storing of bindings.
 /// </summary>
-public class GameInputManager : IDisposable
+public sealed class GameInputManager : IDisposable
 {
-    public event EventHandler<InputBinding> InputBindingPressed;
-    public event EventHandler<InputBinding> InputBindingReleased;
+    /// <summary>
+    /// Raised when changes in bindings are detected such as pressed or released.
+    /// </summary>
+    public event EventHandler<List<GameInputBinding>> InputBindingChange;
     
     /// <summary>
     /// Helper field holding the desired generic input types
@@ -44,7 +46,7 @@ public class GameInputManager : IDisposable
     /// <summary>
     /// GameInput.Net wrapper on Microsoft.GameInput
     /// </summary>
-    private GameInput _gameInput;
+    private readonly GameInput _gameInput;
 
     /// <summary>
     /// Last GameInput reading to use as index for continued reading each tick.
@@ -56,11 +58,8 @@ public class GameInputManager : IDisposable
     /// Buffer to contain the inputs captured in a comparable class form.
     /// </summary>
     private readonly HashSet<InputTrigger> _inputBuffer = [];
-
-    /// <summary>
-    /// Relationship of Commands to Bindings for quick unique lookup.
-    /// </summary>
-    private Dictionary<InputBinding, GameInputBinding> _inputBindings = [];
+    
+    private BindingProfile _profile;
     
     /// <summary>
     /// Holds the last frames active bindings for comparison.
@@ -91,10 +90,19 @@ public class GameInputManager : IDisposable
     /// <summary>
     /// Start async periodic task to read inputs and raise input events
     /// </summary>
-    public void Start()
+    /// <returns>TRUE if started successfully, FALSE if there is an error.</returns>
+    public bool Start()
     {
+        // No point in running without a profile set.
+        if (_profile == null)
+        {
+            _logger.Error("Cannot start game input manager with no profile set");
+            return false;
+        }
+        
         _cancellationTokenSource = new CancellationTokenSource();
         _ = RunPeriodicTaskAsync(_cancellationTokenSource.Token);
+        return true;
     }
 
     /// <summary>
@@ -163,6 +171,56 @@ public class GameInputManager : IDisposable
         
         _raiseEvents = true;
         return input;
+    }
+
+    public async Task<bool> CaptureBinding(InputBinding binding, int timeOut)
+    {
+        // TODO: Replace this with more elegant binding system.
+        // Figure out if we have a modifier or normal binding.
+        var isModifier = (int)binding >= 200 ?  true : false;
+        
+        // How long will we wait for the 
+        var maxElapsed = new TimeSpan(timeOut);
+        var start = DateTime.Now;
+        _raiseEvents = false;
+
+        // Wait for an input from the main loop. or the time to run out.
+        while (true)
+        {
+            await Task.Delay(10);
+
+            InputTrigger input;
+            if (DateTime.Now - start > maxElapsed)
+            {
+                input = null;
+                return false;
+            }
+
+            if (_inputBuffer.Count == 0)
+            {
+                continue;
+            }
+
+            input = _inputBuffer.First();
+            _bindingManager.SetBinding(binding, input);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Gets the binding associated with a <see cref="InputBinding"/>
+    /// </summary>
+    /// <param name="binding">The binding you want to retreive</param>
+    /// <returns>A <see cref="GameInputBinding"/> or null if not found.</returns>
+    public GameInputBinding GetBinding(InputBinding binding)
+    {
+        if (_profile == null)
+        {
+            _logger.Error("You must load an input profile before getting a binding.");
+            return null;
+        }
+        
+        return _profile.Bindings.TryGetValue(binding, out var input) ? input : null;
     }
     
     /// <summary>
@@ -312,8 +370,9 @@ public class GameInputManager : IDisposable
     {
         // Allow for temporary suspension of event raising.
         if (!_raiseEvents) return;
+        if (_profile == null) return;
         
-        foreach (var commandBinding in _inputBindings)
+        foreach (var commandBinding in _profile.Bindings)
         {
             _activeBindingsBuffer.Clear();
             
@@ -369,6 +428,9 @@ public class GameInputManager : IDisposable
         return _inputBuffer.Contains(binding.Modifier) && input;
     }
 
+    /// <summary>
+    /// Cleanup managed objects or we get big leak.
+    /// </summary>
     public void Dispose()
     {
         _cancellationTokenSource?.Dispose();
