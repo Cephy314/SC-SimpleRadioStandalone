@@ -31,21 +31,21 @@ public class BindingManager : IDisposable
     /// <param name="profileName">Name of the profile bindings are associated with</param>
     /// <param name="bindings">Dictionary with <see cref="InputBinding"/> as key and <see cref="GameInputBinding" /> as value</param>
     /// <returns>True if file written successfully.</returns>
-    private bool TryWriteBindingProfile(string profileName, BindingProfile bindings)
+    private bool TryWriteBindingProfile(BindingProfile bindings)
     {
-        if (bindings == null || bindings == default(BindingProfile))
+        if (bindings == null)
         {
             _logger.Error($"Invalid binding profile object.");
             return false;
         }
 
-        if (string.IsNullOrEmpty(profileName))
+        if (string.IsNullOrEmpty(bindings.ProfileName))
         {
-            _logger.Error($"Invalid profile name: {profileName}");
+            _logger.Error($"Invalid profile name: {bindings.ProfileName}");
             return false;
         }
 
-        var name = profileName.Trim().ToLower();
+        var name = bindings.ProfileName.Trim().ToLower();
         
         var filePath = Path.Combine(_appDirectory, $"bindings-{name}.json");
 
@@ -57,7 +57,7 @@ public class BindingManager : IDisposable
         }
         catch (Exception e)
         {
-            _logger.Error(e, $"Failed to write binding profile: {profileName}");
+            _logger.Error(e, $"Failed to write binding profile: {bindings.ProfileName}");
             return false;
         }
         
@@ -106,18 +106,33 @@ public class BindingManager : IDisposable
         }
     }
 
-    public void SetBinding(GameInputBinding binding)
+    public bool SetBinding(InputBinding bind, InputTrigger trigger)
     {
+        if (trigger == null)
+        {
+            _logger.Error($"Got Null InputTrigger: {trigger}");
+            return false;
+        }
+
         if (_currentProfile == null)
         {
             _logger.Error($"Binding profile object is null.");
             throw new NullReferenceException($"Binding profile object is null.");
         }
+        
+        if ((int)bind >= 200)
+        {
+            _currentProfile.Bindings[bind - 100].Modifier = trigger;
+        }
+        else
+        {
+            _currentProfile.Bindings[bind].Input = trigger;
+        }
 
-        _currentProfile.Bindings[binding.Binding] = binding;
+        return TryWriteBindingProfile(_currentProfile);
     }
 
-    private bool ClearBinding(InputBinding binding)
+    public bool ClearBinding(InputBinding binding)
     {
         if (_currentProfile == null)
         {
