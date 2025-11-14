@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Caliburn.Micro;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Network.DCS;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Properties;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Settings.Favourites;
@@ -42,6 +43,8 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
 {
     private static readonly long OVERLAY_DEBOUNCE = 500;
     private readonly AudioManager _audioManager;
+    private readonly GameInputManager _gameInputManager;
+    private readonly BindingManager _bindingManager;
 
     private readonly GlobalSettingsStore _globalSettings = GlobalSettingsStore.Instance;
 
@@ -62,7 +65,10 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
 
     public MainWindowViewModel()
     {
-        _audioManager = new AudioManager(AudioOutput.WindowsN);
+        _bindingManager = new BindingManager();
+        _gameInputManager = new GameInputManager(new TimeSpan(10), _bindingManager);
+
+        _audioManager = new AudioManager(AudioOutput.WindowsN, _gameInputManager);
 
         PositionClickCommand = new DelegateCommand(() =>
         {
