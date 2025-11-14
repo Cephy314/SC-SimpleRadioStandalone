@@ -22,6 +22,11 @@ public class GameInputBinding : IEquatable<GameInputBinding>
     /// Secondary combination of inputs
     /// </summary>
     public InputTrigger Modifier { get; set; }
+    
+    /// <summary>
+    /// Is binding currently pressed.
+    /// </summary>
+    public bool IsActive { get; set; }
 
     /// <summary>
     /// Initialize Generic Binding, JSON Friendly
