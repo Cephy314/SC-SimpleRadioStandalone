@@ -30,7 +30,6 @@
                                                       ControlInputBinding="Switch1"
                                                       InputName="Radio 1" />
             <inputSettingsControl:InputBindingControl x:Name="Radio2"
-
                                                       ControlInputBinding="Switch2"
                                                       InputName="Radio 2" />
             <inputSettingsControl:InputBindingControl x:Name="Radio3"

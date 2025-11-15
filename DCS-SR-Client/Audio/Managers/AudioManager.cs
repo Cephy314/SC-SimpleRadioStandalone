@@ -1,18 +1,22 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Caliburn.Micro;
-using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Utility;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Utility;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Singletons;
 using Ciribob.DCS.SimpleRadio.Standalone.Common;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Models;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Opus.Core;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Providers;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Recording;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Utility;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Models.EventMessages;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Models.Player;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Network.Client;
@@ -25,11 +29,6 @@ using NLog;
 using WebRtcVadSharp;
 using Application = Ciribob.DCS.SimpleRadio.Standalone.Common.Audio.Opus.Application;
 using LogManager = NLog.LogManager;
-using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Utility;
-using System.Buffers;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers;
 
@@ -97,12 +96,12 @@ public class AudioManager : IHandle<SRClientUpdateMessage>
     private WasapiCapture _wasapiCapture;
 
     private SRSWasapiOut _waveOut;
-    private readonly GameInputManager _gameInputManager;
 
-    public AudioManager(bool windowsN, GameInputManager gameInputManager)
+
+    public AudioManager(bool windowsN)
     {
         this.windowsN = windowsN;
-        _gameInputManager = gameInputManager;
+
         _guid = ClientStateSingleton.Instance.ShortGUID;
     }
 
@@ -280,9 +279,9 @@ public class AudioManager : IHandle<SRClientUpdateMessage>
         //Start UDP handler
         _udpVoiceHandler =
             new UDPVoiceHandler(guid, endPoint);
-        
 
-        _udpClientAudioProcessor = new UDPClientAudioProcessor(_udpVoiceHandler, this, _gameInputManager, guid);
+
+        _udpClientAudioProcessor = new UDPClientAudioProcessor(_udpVoiceHandler, this, guid);
 
         _udpVoiceHandler.Connect();
         _udpClientAudioProcessor.Start();

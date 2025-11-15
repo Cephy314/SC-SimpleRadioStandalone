@@ -12,7 +12,6 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Caliburn.Micro;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers;
-using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Network.DCS;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Properties;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Settings.Favourites;
@@ -34,6 +33,7 @@ using NLog;
 using AwaRadioOverlayWindow =
     Ciribob.DCS.SimpleRadio.Standalone.Client.UI.ClientWindow.AwacsRadioOverlayWindow.AwaRadioOverlayWindow;
 using LogManager = NLog.LogManager;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI.ClientWindow;
 
@@ -43,8 +43,6 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
 {
     private static readonly long OVERLAY_DEBOUNCE = 500;
     private readonly AudioManager _audioManager;
-    private readonly GameInputManager _gameInputManager;
-    private readonly BindingManager _bindingManager;
 
     private readonly GlobalSettingsStore _globalSettings = GlobalSettingsStore.Instance;
 
@@ -65,10 +63,7 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
 
     public MainWindowViewModel()
     {
-        _bindingManager = new BindingManager();
-        _gameInputManager = new GameInputManager(new TimeSpan(10), _bindingManager);
-
-        _audioManager = new AudioManager(AudioOutput.WindowsN, _gameInputManager);
+        _audioManager = new AudioManager(AudioOutput.WindowsN);
 
         PositionClickCommand = new DelegateCommand(() =>
         {
@@ -357,7 +352,7 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
                 {
                     WindowHelper.BringProcessToFront(Process.GetCurrentProcess());
 
-                    var result = System.Windows.MessageBox.Show(App.Current.MainWindow,
+                    var result = MessageBox.Show(App.Current.MainWindow,
                         $"{Resources.MsgBoxMismatchText1} {message.Address} {Resources.MsgBoxMismatchText2} {ServerAddress} {Resources.MsgBoxMismatchText3}\n\n" +
                         $"{Resources.MsgBoxMismatchText4}",
                         Resources.MsgBoxMismatch,
@@ -530,7 +525,7 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
                 else
                 {
                     //invalid ID
-                    System.Windows.MessageBox.Show("Invalid IP or Host Name!", "Host Name Error", MessageBoxButton.OK,
+                    MessageBox.Show("Invalid IP or Host Name!", "Host Name Error", MessageBoxButton.OK,
                         MessageBoxImage.Error);
 
                     IsConnected = false;
@@ -538,7 +533,7 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
             }
             catch (Exception ex) when (ex is SocketException || ex is ArgumentException)
             {
-                System.Windows.MessageBox.Show("Invalid IP or Host Name!", "Host Name Error", MessageBoxButton.OK,
+                MessageBox.Show("Invalid IP or Host Name!", "Host Name Error", MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
                 IsConnected = false;
@@ -652,7 +647,7 @@ public class MainWindowViewModel : PropertyChangedBaseClass, IHandle<TCPClientSt
     {
         if (_globalSettings.GetClientSetting(GlobalSettingsKeys.MicAudioOutputDeviceId).RawValue
             .Equals(_globalSettings.GetClientSetting(GlobalSettingsKeys.AudioOutputDeviceId).RawValue))
-            System.Windows.MessageBox.Show(
+            MessageBox.Show(
                 "Mic Output and Speaker Output should not be set to the same device!\n\nMic Output is just for recording and not for use as a sidetone. You will hear yourself with a small delay!\n\nHit disconnect and change Mic Output / Passthrough",
                 "Warning", MessageBoxButton.OK,
                 MessageBoxImage.Warning);

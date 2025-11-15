@@ -1,11 +1,4 @@
-﻿using Ciribob.DCS.SimpleRadio.Standalone.Client.Singletons;
-using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
-using NLog;
-using NLog.Config;
-using NLog.Targets;
-using NLog.Targets.Wrappers;
-using Sentry;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -17,6 +10,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Singletons;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.UI.ClientWindow;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using NLog.Targets.Wrappers;
+using Sentry;
 using Application = System.Windows.Application;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client;
@@ -31,11 +35,31 @@ public partial class App : Application
     private bool loggingReady;
     private Mutex SingleInstanceMutex { get; set; }
 
+    /// <summary>
+    ///     Host too provide dependency injection.
+    /// </summary>
+    private readonly Microsoft.Extensions.Hosting.IHost _host;
+
+    public static IServiceProvider Services => ((App)Current)._host.Services;
+
     public App()
     {
+        _host = Host.CreateDefaultBuilder().ConfigureServices((_, services) =>
+        {
+            // Register services
+            services.AddSingleton<IGameInputManager, GameInputManager>();
+            services.AddSingleton<IBindingManager, BindingManager>();
+
+            // Register View Models
+            services.AddTransient<MainWindowViewModel>();
+
+            // Register windows
+            services.AddTransient<MainWindow>();
+        }).Build();
+
         System.Windows.Forms.Application.EnableVisualStyles();
 
-        // Common ones to use are -lang:en-us , -lang:zh , -lang:zh-cn , -lang:fr
+        // Common ones to use are -lang:en-us , -lang:zh , -lang:zh-cn , -lang:fr  
         try
         {
             string lang = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("-lang:")).Substring(6);
@@ -61,9 +85,9 @@ public partial class App : Application
             {
                 TaskDialog.ShowDialog(new TaskDialogPage
                 {
-                    Caption = $"Installation Error!",
+                    Caption = "Installation Error!",
                     Heading = $"You are missing the {dll}",
-                    Text = $"Reinstall using the Installer and don't move the client from the installation directory!",
+                    Text = "Reinstall using the Installer and don't move the client from the installation directory!",
                     Icon = TaskDialogIcon.Error,
                     Buttons = { TaskDialogButton.OK }
                 });
@@ -305,9 +329,21 @@ public partial class App : Application
         MainWindow?.Close();
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
+    {
+        await _host.StartAsync();
+
+        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        mainWindow?.Show();
+
+        base.OnStartup(e);
+    }
+
+    protected override async void OnExit(ExitEventArgs e)
     {
         ClientStateSingleton.Instance.Close();
+        await _host.StopAsync();
+        _host.Dispose();
         
         if (_notifyIcon != null)
             _notifyIcon.Visible = false;
@@ -324,3 +360,5 @@ public partial class App : Application
         }
     }
 }
+
+internal interface IHost { }

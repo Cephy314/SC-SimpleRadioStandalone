@@ -7,6 +7,7 @@ using Caliburn.Micro;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Network.Singletons;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using InputBinding = Ciribob.DCS.SimpleRadio.Standalone.Common.Settings.InputBinding;
 using Key = SharpDX.DirectInput.Key;
 
@@ -19,21 +20,19 @@ public partial class InputBindingControl : UserControl, IHandle<ProfileChangedMe
 {
     public static readonly DependencyProperty ControlInputDependencyPropertyProperty =
         DependencyProperty.Register(nameof(ControlInputBinding), typeof(InputBinding), typeof(InputBindingControl),
-            new PropertyMetadata(null)
-        );
+            new PropertyMetadata(null));
 
     public static readonly DependencyProperty ControlInputNameDependencyPropertyProperty =
         DependencyProperty.Register(nameof(InputName), typeof(string), typeof(InputBindingControl),
-            new PropertyMetadata("None")
-        );
+            new PropertyMetadata("None"));
 
-    private readonly GameInputManager _gameInputManager;
+    private readonly IGameInputManager _gameInputManager;
     private readonly InputManager _inputManager;
 
-    public InputBindingControl(GameInputManager gameInputManager, )
+    public InputBindingControl()
     {
         InitializeComponent();
-        _gameInputManager = gameInputManager;
+        _gameInputManager = App.Services.GetRequiredService<IGameInputManager>();
         Loaded += (sender, args) => LoadInputSettings();
 
         EventBus.Instance.SubscribeOnUIThread(this);
@@ -62,12 +61,16 @@ public partial class InputBindingControl : UserControl, IHandle<ProfileChangedMe
         }
     }
 
+    #region IHandle<ProfileChangedMessage> Members
+
     public Task HandleAsync(ProfileChangedMessage message, CancellationToken cancellationToken)
     {
         LoadInputSettings();
 
         return Task.CompletedTask;
     }
+
+    #endregion
 
     public void LoadInputSettings()
     {
@@ -76,9 +79,35 @@ public partial class InputBindingControl : UserControl, IHandle<ProfileChangedMe
         ModifierBinding = (InputBinding)(int)ControlInputBinding + 100; //add 100 gets the enum of the modifier
 
         var binding = _gameInputManager.GetBinding(ControlInputBinding);
-        if (binding != null)
+        if (binding == null)
         {
-            Device.Text = binding.Input.Type.ToString();
+            return;
+        }
+
+        if (binding.Input != null)
+        {
+            // Hardware Device Type/Name
+            Device.Text = binding.Input.ToString();
+            // Input name, button number or key friendly name etc.  Indicate switch/button?
+            DeviceText.Text = binding.Input.ToString();
+        }
+        else
+        {
+            Device.Text = "None";
+            DeviceText.Text = "None";
+        }
+
+        if (binding.Modifier != null)
+        {
+            // Hardware Device Type/Name
+            ModifierText.Text = binding.Input.ToString();
+            // Input name, button number or key friendly name etc.  Indicate switch/button?
+            ModifierDevice.Text = binding.Input.ToString();
+        }
+        else
+        {
+            ModifierText.Text = "None";
+            ModifierDevice.Text = "None";
         }
 
         // TODO: Remove old code
@@ -115,33 +144,33 @@ public partial class InputBindingControl : UserControl, IHandle<ProfileChangedMe
         // }
     }
 
-    
+
     private string GetDeviceText(int button, string name)
     {
         if (name.ToLowerInvariant() == "keyboard")
+        {
             try
             {
                 var key = (Key)button;
                 return key.ToString();
             }
-            catch
-            {
-            }
+            catch { }
+        }
 
         return button < 128 ? (button + 1).ToString() : "POV " + (button - 127);
     }
 
-    private async Task Device_Click(object sender, RoutedEventArgs e)
+    private void Device_Click(object sender, RoutedEventArgs e)
     {
         DeviceClear.IsEnabled = false;
         DeviceButton.IsEnabled = false;
-        
+
         // TODO: Run popup timer 
-        
-        var success = await _gameInputManager.CaptureBinding(ControlInputBinding, 3000);
-        
+
+        var success = _gameInputManager.CaptureBinding(ControlInputBinding, 3000);
+
         // TODO: Close Timer
-        
+
 
         // InputDeviceManager.Instance.AssignButton(device =>
         // {
@@ -166,20 +195,20 @@ public partial class InputBindingControl : UserControl, IHandle<ProfileChangedMe
         DeviceText.Text = "None";
     }
 
-    private async Task Modifier_Click(object sender, RoutedEventArgs e)
+    private void Modifier_Click(object sender, RoutedEventArgs e)
     {
         ModifierButtonClear.IsEnabled = false;
         ModifierButton.IsEnabled = false;
 
         // TODO: Point this to a common function or to the Device_Click, we dont need to split it up
         // the BindingManager handles the modifier vs not modifier on its own.
-        
+
         // TODO: Run popup timer 
-        
-        var success = await _gameInputManager.CaptureBinding(ControlInputBinding, 3000);
-        
+
+        var success = _gameInputManager.CaptureBinding(ControlInputBinding, 3000);
+
         // TODO: Close Timer
-        
+
         // InputDeviceManager.Instance.AssignButton(device =>
         // {
         //     ModifierButtonClear.IsEnabled = true;

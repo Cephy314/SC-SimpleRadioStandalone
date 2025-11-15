@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using GameInputDotNet;
 using GameInputDotNet.Interop;
 using GameInputDotNet.Interop.Enums;
+using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using InputBinding = Ciribob.DCS.SimpleRadio.Standalone.Common.Settings.InputBinding;
 
@@ -14,7 +15,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 /// <summary>
 /// Handle game input and trigger events for matching bindings, as well as the storing of bindings.
 /// </summary>
-public sealed class GameInputManager : IDisposable
+public sealed class GameInputManager : IGameInputManager
 {
     /// <summary>
     /// Raised when changes in bindings are detected such as pressed or released.
@@ -74,17 +75,21 @@ public sealed class GameInputManager : IDisposable
     /// <summary>
     /// Reference to the BindingManager so we may subscribe to events like binding changes.
     /// </summary>
-    private readonly BindingManager _bindingManager;
+    private readonly IBindingManager _bindingManager;
     
     /// <summary>
     /// Manage input handling through Microsoft GameInput.
     /// </summary>
     /// <param name="interval">Frequency of input polling.</param>
-    public GameInputManager(TimeSpan interval, BindingManager bindingManager)
+    public GameInputManager()
     {
         _gameInput = GameInput.Create();
-        _interval = interval;
-        _bindingManager = bindingManager;
+
+        // TODO: Get interval from some internal configuration, dont hard code.
+        _interval = new TimeSpan(50);
+
+        // TODO: Should be passed as a service injection so accessible by others.  Temp for testing.
+        _bindingManager = App.Services.GetRequiredService<IBindingManager>();
     }
 
     /// <summary>
@@ -127,7 +132,7 @@ public sealed class GameInputManager : IDisposable
                 ProcessInput();
             }
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException)
         {
             // Graceful exit!
         }
@@ -136,41 +141,6 @@ public sealed class GameInputManager : IDisposable
             // Not graceful...
             _logger.Error(e);
         }
-    }
-    
-    /// <summary>
-    /// Pause binding events and listen to the input loop for the first input it gets then return the value and resumes binding events.
-    /// </summary>
-    /// <param name="waitTime">Time in milliseconds to wait for an input</param>
-    /// <returns>First <see cref="InputTrigger"/> or null if nothing found</returns>
-    public async Task<InputTrigger> WaitForNextInput(int waitTime)
-    {
-        // How long will we wait for the 
-        var maxElapsed = new TimeSpan(waitTime);
-        var start = DateTime.Now;
-        _raiseEvents = false;
-        InputTrigger input;
-        
-        // Wait for an input from the main loop. or the time to run out.
-        while (true)
-        {
-            await Task.Delay(10);
-            
-            if (DateTime.Now - start > maxElapsed)
-            {
-                input = null;
-                break;
-            }
-
-            if (_inputBuffer.Count != 0)
-            {
-                input = _inputBuffer.First();
-                break;
-            }
-        }
-        
-        _raiseEvents = true;
-        return input;
     }
 
     public async Task<bool> CaptureBinding(InputBinding binding, int timeOut)
@@ -442,8 +412,8 @@ public sealed class GameInputManager : IDisposable
         }
     }
 
-    private void OnInputBindingChange(List<GameInputBinding> binding)
+    private void OnInputBindingChange(List<GameInputBinding> bindings)
     {
-        InputBindingChange?.Invoke(this, binding);
+        InputBindingChange?.Invoke(this, bindings);
     }
 }

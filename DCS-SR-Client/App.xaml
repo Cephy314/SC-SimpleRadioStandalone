@@ -1,7 +1,7 @@
-﻿<Application x:Class="Ciribob.DCS.SimpleRadio.Standalone.Client.App"
+﻿<!-- Removed StartupUri="UI/ClientWindow/MainWindow.xaml" for dependency injection -->
+<Application x:Class="Ciribob.DCS.SimpleRadio.Standalone.Client.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="UI/ClientWindow/MainWindow.xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

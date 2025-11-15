@@ -30,6 +30,7 @@
         <FileVersion>2.3.2.2</FileVersion>
         <Version>2.3.2.2</Version>
         <ApplicationIcon>audio-headset.ico</ApplicationIcon>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
     <PropertyGroup>
         <StartupObject>Ciribob.DCS.SimpleRadio.Standalone.Client.App</StartupObject>
@@ -494,6 +495,8 @@
         <PackageReference Include="Fody" Version="6.9.2" />
         <PackageReference Include="GameInput.Net" Version="1.0.3" />
         <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0"/>
         <PackageReference Include="Microsoft.Windows.Compatibility" Version="9.0.8" />
         <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
         <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />

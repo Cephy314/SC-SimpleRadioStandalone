@@ -16,8 +16,8 @@ using Ciribob.DCS.SimpleRadio.Standalone.Common.Models.Player;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Network.Client;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Network.Singletons;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings;
-using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Common.Settings.Setting;
+using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using ConnectedClientsSingleton =
     Ciribob.DCS.SimpleRadio.Standalone.Common.Network.Singletons.ConnectedClientsSingleton;
@@ -34,7 +34,7 @@ public class UDPClientAudioProcessor : IDisposable
     // private UDPStateSender _udpStateSender;
     private readonly AudioInputSingleton _audioInputSingleton = AudioInputSingleton.Instance;
     private readonly AudioManager _audioManager;
-    private readonly GameInputManager _gameInputManager;
+    private readonly IGameInputManager _gameInputManager;
     private readonly ConnectedClientsSingleton _clients = ConnectedClientsSingleton.Instance;
     private readonly ClientStateSingleton _clientStateSingleton = ClientStateSingleton.Instance;
     private readonly GlobalSettingsStore _globalSettings = GlobalSettingsStore.Instance;
@@ -57,11 +57,11 @@ public class UDPClientAudioProcessor : IDisposable
     private volatile bool _ptt;
     private bool _stop;
 
-    public UDPClientAudioProcessor(UDPVoiceHandler udpClient, AudioManager audioManager, GameInputManager gameInputManager, string guid)
+    public UDPClientAudioProcessor(UDPVoiceHandler udpClient, AudioManager audioManager, string guid)
     {
         _udpClient = udpClient;
         _audioManager = audioManager;
-        _gameInputManager = gameInputManager;
+        _gameInputManager = App.Services.GetRequiredService<IGameInputManager>();
         _guid = guid;
         _guidAsciiBytes = Encoding.ASCII.GetBytes(guid);
 
